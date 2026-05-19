@@ -14,6 +14,7 @@ from __future__ import annotations
 import logging
 from datetime import datetime
 from typing import Any, Dict, List, Optional
+from zoneinfo import ZoneInfo
 
 import streamlit as st
 
@@ -200,21 +201,47 @@ def _normalize_messages(messages: List[Any]) -> List[Dict[str, Any]]:
     return out
 
 
+_DISPLAY_TZ = ZoneInfo("Asia/Dubai")
+
+
 def _fmt_time(iso_str: Optional[str]) -> str:
+    """Format a Supabase ISO timestamp into the app's display timezone."""
     if not iso_str:
         return ""
     try:
         dt = datetime.fromisoformat(iso_str.replace("Z", "+00:00"))
-        return dt.strftime("%b %d, %H:%M")
+        return dt.astimezone(_DISPLAY_TZ).strftime("%b %d, %H:%M")
     except Exception:
         return iso_str
 
 
 def _ensure_current_session() -> str:
-    """Make sure st.session_state['current_session_id'] is set. Creates one if not."""
+    """Return the current session id.
+
+    Priority:
+      1. The session id stored in session_state, IF it still exists in the DB
+         (otherwise it's stale — e.g. session was soft-deleted).
+      2. The most recently active existing session for this gate user.
+      3. Only if none exist at all, create a fresh empty session.
+
+    This avoids spawning a new "Untitled chat" on every page reload, after
+    deleting the active chat, etc.
+    """
     sid = st.session_state.get("current_session_id")
-    if sid:
+    if sid and get_session(sid):
         return sid
+    # Stale or missing — drop it.
+    if sid:
+        st.session_state.pop("current_session_id", None)
+
+    # Fall back to the most recent existing session.
+    recent = list_sessions(limit=1)
+    if recent:
+        sid = recent[0]["id"]
+        st.session_state["current_session_id"] = sid
+        return sid
+
+    # No sessions exist for this gate user — create the very first one.
     row = create_session()
     sid = row["id"]
     initialize_code_charlie_session_checkpoint(session_id=sid, user_id=settings.GATE_USER_ID)
