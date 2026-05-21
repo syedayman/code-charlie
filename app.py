@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 from zoneinfo import ZoneInfo
 
@@ -43,6 +44,8 @@ from lib.sessions import (
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+INTRO_IMAGE_PATH = Path(__file__).with_name("code-charlie.png")
 
 
 # =============================================================================
@@ -275,6 +278,12 @@ def _render_assistant_meta(metadata: Dict[str, Any]) -> None:
                 st.caption(claim)
 
 
+def _render_intro_image() -> None:
+    """Render the Code Charlie intro image when the asset is available."""
+    if INTRO_IMAGE_PATH.exists():
+        st.image(str(INTRO_IMAGE_PATH), width=320)
+
+
 def _invoke_for_pending(session_id: str, text: str) -> None:
     """Run the graph for the pending user message and persist sidebar metadata."""
     row = get_session(session_id)
@@ -434,6 +443,8 @@ for m in messages:
     metadata = m.get("metadata") or {}
 
     with st.chat_message("user" if role == "user" else "assistant"):
+        if role == "assistant" and content == INTRO_MESSAGE_CONTENT:
+            _render_intro_image()
         st.markdown(content)
         if role == "assistant" and metadata:
             _render_assistant_meta(metadata)
