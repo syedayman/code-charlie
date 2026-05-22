@@ -179,10 +179,72 @@ header[data-testid="stHeader"] [data-testid="stDecoration"],
 header[data-testid="stHeader"] [data-testid="stStatusWidget"] {
     display: none !important;
 }
-header[data-testid="stHeader"] [data-testid="stToolbar"] {
+
+/* Streamlit Community Cloud deploy toolbar siblings (Fork / Share / GitHub /
+   Deploy / kebab). Keep parent stToolbar visible — the sidebar reopen
+   chevron (stExpandSidebarButton) lives inside it. Only nuke its noisy
+   children. */
+[data-testid="stToolbarActions"],
+[data-testid="stAppDeployButton"],
+[data-testid="stMainMenu"],
+[data-testid="stMainMenuButton"],
+[data-testid="stActionButton"],
+[data-testid="stAppViewerBadge"],
+[data-testid="stForkButton"],
+[data-testid="stForkAppButton"],
+[data-testid="stAppForkButton"],
+[data-testid="stShareButton"],
+[data-testid="stStarButton"],
+[data-testid="stProfileWidget"],
+[data-testid="stOwnerBadge"],
+[data-testid="stHostedDeploymentBadge"],
+[data-testid="viewerBadge"],
+[data-testid="stViewerBadge"],
+[class*="viewerBadge"],
+[class*="ViewerBadge"],
+[class*="ForkButton"],
+[class*="ShareButton"],
+[class*="ProfileBadge"],
+[class*="ProfileWidget"],
+[class*="OwnerBadge"],
+.viewerBadge_link__qRIco,
+.viewerBadge_container__1QSob,
+.viewerBadge_text__1JaDK,
+.styles_terminalButton__JBj5T,
+header[data-testid="stHeader"] a[href*="github.com"],
+header[data-testid="stHeader"] a[href*="streamlit.io"],
+header[data-testid="stHeader"] a[href*="share.streamlit.io"],
+header[data-testid="stHeader"] button[data-testid="stBaseButton-header"],
+a[href*="streamlit.io"][data-testid*="Badge"],
+a[href*="github.com"][class*="viewer"],
+a[href*="github.com/streamlit"],
+.stApp > div > a[href*="github.com"],
+.stApp > div > a[href*="streamlit.io"],
+.stApp > a[href*="github.com"],
+.stApp > a[href*="streamlit.io"] {
+    display: none !important;
+    visibility: hidden !important;
+}
+
+/* Force the toolbar + sidebar expand button visible. The sidebar reopen
+   chevron (stExpandSidebarButton) is nested inside stToolbar — without
+   this rule the broader hide above would catch it. */
+header[data-testid="stHeader"],
+[data-testid="stToolbar"],
+[data-testid="stExpandSidebarButton"],
+[data-testid="stSidebarCollapseButton"],
+[data-testid="stSidebarHeader"],
+button[data-testid="stExpandSidebarButton"],
+button[data-testid="stBaseButton-headerNoPadding"] {
     display: flex !important;
     visibility: visible !important;
     pointer-events: auto !important;
+    opacity: 1 !important;
+}
+[data-testid="stExpandSidebarButton"] *,
+[data-testid="stSidebarCollapseButton"] * {
+    visibility: visible !important;
+    opacity: 1 !important;
 }
 header[data-testid="stHeader"] button {
     background: rgba(99, 102, 241, 0.2) !important;
@@ -342,6 +404,36 @@ section[data-testid="stSidebar"] .stButton button[kind="primary"]:hover {
     max-width: 100% !important;
     margin-left: 0 !important;
     margin-right: auto !important;
+}
+
+/* High-specificity override using actual DOM testids. Streamlit wraps the
+   tertiary button content as:
+     button[data-testid="stBaseButton-tertiary"]
+       > div  > span  > div[data-testid="stMarkdownContainer"]
+   The inner div + span are inline-flex with center alignment via emotion
+   hashed classes. Need to flatten every level to block + left-align. */
+section[data-testid="stSidebar"] button[data-testid="stBaseButton-tertiary"] {
+    display: flex !important;
+    flex-direction: column !important;
+    text-align: left !important;
+    justify-content: flex-start !important;
+    align-items: flex-start !important;
+    width: 100% !important;
+}
+section[data-testid="stSidebar"] button[data-testid="stBaseButton-tertiary"] > div,
+section[data-testid="stSidebar"] button[data-testid="stBaseButton-tertiary"] > div > span,
+section[data-testid="stSidebar"] button[data-testid="stBaseButton-tertiary"] [data-testid="stMarkdownContainer"] {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    text-align: left !important;
+    justify-content: flex-start !important;
+    align-items: flex-start !important;
+    margin: 0 !important;
+}
+section[data-testid="stSidebar"] button[data-testid="stBaseButton-tertiary"] [data-testid="stMarkdownContainer"] p {
+    text-align: left !important;
+    margin: 0 !important;
 }
 
 /* ---- Icon buttons (rename / delete) ---- */
@@ -951,7 +1043,6 @@ with st.sidebar:
         st.image(str(INTRO_IMAGE_PATH), width=220)
 
     st.html('<div class="sidebar-brand-title">Code Charlie</div>')
-    st.html('<div class="sidebar-brand-caption">Powered by Medha 1.0 - KARR AI</div>')
 
     if st.button("＋ New chat", use_container_width=True, type="primary"):
         try:
@@ -1105,7 +1196,7 @@ except Exception as exc:
 
 messages = _normalize_messages(state.get("messages", []))
 
-st.html('<h1 class="main-chat-title">Code Charlie</h1>')
+st.html('<h1 class="main-chat-title">Code Charlie: Powered by Medha 1.0 - KARR AI</h1>')
 #st.caption("Ask compliance questions across DBC, CIBSE, EN 81, BCO, ASME/ADA/IBC, HTM, ISO, DoH, BMU, CSI, Machinery Directive.")
 
 # Render existing history
