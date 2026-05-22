@@ -17,12 +17,12 @@ class Settings(BaseSettings):
     SUPABASE_URL: str
     SUPABASE_SERVICE_ROLE_KEY: str
 
-    # PostgreSQL session-pooler URL for LangGraph checkpoints.
+    # PostgreSQL transaction-pooler URL for LangGraph checkpoints.
     # Get from Supabase Dashboard > Connect.
     DATABASE_URL: str
-    CHECKPOINT_POOL_MIN_SIZE: int = 1
-    CHECKPOINT_POOL_MAX_SIZE: int = 5
-    CHECKPOINT_POOL_TIMEOUT_SECONDS: int = 30
+    CHECKPOINT_POOL_MIN_SIZE: int = 0
+    CHECKPOINT_POOL_MAX_SIZE: int = 2
+    CHECKPOINT_POOL_TIMEOUT_SECONDS: int = 60
     CHECKPOINT_POOL_MAX_IDLE_SECONDS: int = 600
     CHECKPOINT_POOL_MAX_LIFETIME_SECONDS: int = 3600
 

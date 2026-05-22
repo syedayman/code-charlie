@@ -11,8 +11,9 @@ Single-file app:
 
 from __future__ import annotations
 
+import base64
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 from zoneinfo import ZoneInfo
@@ -46,6 +47,20 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 INTRO_IMAGE_PATH = Path(__file__).with_name("code-charlie.png")
+DISPLAY_FONT_PATH = (
+    Path(__file__).resolve().parent
+    / "assets"
+    / "fonts"
+    / "ClashGrotesk-Variable.woff2"
+)
+
+
+def _file_data_uri(path: Path, mime_type: str) -> str | None:
+    if not path.exists():
+        return None
+
+    encoded = base64.b64encode(path.read_bytes()).decode("ascii")
+    return f"data:{mime_type};base64,{encoded}"
 
 
 # =============================================================================
@@ -54,7 +69,7 @@ INTRO_IMAGE_PATH = Path(__file__).with_name("code-charlie.png")
 
 st.set_page_config(
     page_title="Code Charlie",
-    page_icon="🏗️",
+    page_icon=str(INTRO_IMAGE_PATH) if INTRO_IMAGE_PATH.exists() else "🏗️",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -72,6 +87,11 @@ if not require_password():
 # Eager warm-up after auth (mask first-render DB/pool latency)
 # =============================================================================
 
+
+def _checkpoint_error_message(exc: Exception) -> str:
+    return f"{exc.__class__.__name__}: {exc}"
+
+
 @st.cache_resource(show_spinner=False)
 def _warm_graph() -> bool:
     """Build the LangGraph + open PostgresSaver pool once per worker."""
@@ -85,7 +105,12 @@ if not st.session_state.get("_warmed"):
         st.markdown("### Code Charlie")
         st.caption("Connecting…")
         with st.spinner(""):
-            _warm_graph()
+            try:
+                _warm_graph()
+                st.session_state.pop("_checkpoint_error", None)
+            except Exception as exc:
+                logger.exception("Code Charlie database warm-up failed")
+                st.session_state["_checkpoint_error"] = _checkpoint_error_message(exc)
     splash.empty()
     st.session_state["_warmed"] = True
 
@@ -94,42 +119,232 @@ if not st.session_state.get("_warmed"):
 # Global CSS — sidebar polish + hover-only actions
 # =============================================================================
 
-st.markdown(
-    """
+display_font_data_uri = _file_data_uri(DISPLAY_FONT_PATH, "font/woff2")
+if display_font_data_uri:
+    st.html(
+        f"""
 <style>
-/* Streamlit 1.40+ adds class `st-key-{key}` on the wrapper of any keyed
-   widget. We target that class — it's far more stable than data-testid
-   selectors, which change across Streamlit versions. */
+@font-face {{
+    font-family: 'Clash Grotesk';
+    src: url('{display_font_data_uri}') format('woff2');
+    font-weight: 200 700;
+    font-display: swap;
+}}
+</style>
+"""
+    )
 
-/* ---- Title button (one per session row) ---- */
-.stApp [class*="st-key-open_"] button {
+st.html(
+    """
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* =========================================================================
+   KARR AI Code Charlie reskin — dark slate base, indigo accents, glassmorph.
+   Streamlit 1.40+ exposes `st-key-{key}` classes on keyed widgets which we
+   target along with the stable `data-testid` attrs.
+   ========================================================================= */
+
+/* ---- Global base ---- */
+/* Set font on root containers only — wildcard `*` would clobber Material
+   Symbols font and break `:material/icon:` rendering. Children inherit. */
+html, body, .stApp, .block-container,
+section[data-testid="stSidebar"] {
+    font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+.stApp {
+    background:
+        radial-gradient(ellipse at top, rgba(99, 102, 241, 0.08), transparent 50%),
+        radial-gradient(ellipse at bottom right, rgba(168, 85, 247, 0.06), transparent 60%),
+        #020617 !important;
+    color: #e2e8f0 !important;
+}
+
+/* Hide default Streamlit chrome, but keep the header alive for sidebar reopen. */
+#MainMenu,
+footer {
+    visibility: hidden;
+    height: 0;
+}
+header[data-testid="stHeader"] {
     background: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-    color: rgba(0, 0, 0, 0.85) !important;
-    text-align: left !important;
-    justify-content: flex-start !important;
-    align-items: flex-start !important;
-    padding: 0.55rem 0.7rem !important;
-    line-height: 1.3 !important;
-    width: 100% !important;
-    border-radius: 8px !important;
-    transition: background-color 0.1s ease !important;
+    height: 2.75rem !important;
+    visibility: visible !important;
+    z-index: 999999 !important;
+    pointer-events: auto !important;
 }
-.stApp [class*="st-key-open_"] button:hover {
-    background: rgba(0, 0, 0, 0.06) !important;
+header[data-testid="stHeader"] [data-testid="stDecoration"],
+header[data-testid="stHeader"] [data-testid="stStatusWidget"] {
+    display: none !important;
 }
-.stApp [class*="st-key-open_"] button p,
-.stApp [class*="st-key-open_"] button > div {
-    text-align: left !important;
-    justify-content: flex-start !important;
-    align-items: flex-start !important;
+header[data-testid="stHeader"] [data-testid="stToolbar"] {
+    display: flex !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
 }
-.stApp [class*="st-key-open_"] button strong {
-    font-weight: 600;
+header[data-testid="stHeader"] button {
+    background: rgba(99, 102, 241, 0.2) !important;
+    border: 1px solid rgba(129, 140, 248, 0.35) !important;
+    border-radius: 0.7rem !important;
+    color: #e2e8f0 !important;
+    margin-left: 0.6rem !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+header[data-testid="stHeader"] button:hover {
+    background: rgba(99, 102, 241, 0.32) !important;
+}
+header[data-testid="stHeader"] svg {
+    color: #e2e8f0 !important;
+    fill: currentColor !important;
 }
 
-/* ---- Icon buttons (rename / delete) — circle, hover bg = circle, no chrome ---- */
+.block-container {
+    padding-top: 1.5rem !important;
+    padding-bottom: 6rem !important;
+    max-width: 78rem !important;
+}
+
+/* Headings + captions in main area */
+.stApp h1, .stApp h2, .stApp h3 {
+    color: #f1f5f9 !important;
+    font-weight: 600 !important;
+    letter-spacing: -0.01em;
+}
+.stApp h1 { font-size: 1.875rem !important; }
+.stApp [data-testid="stCaptionContainer"],
+.stApp .stCaption,
+.stApp small {
+    color: #94a3b8 !important;
+}
+
+.stApp p, .stApp li, .stApp span, .stApp div {
+    color: #e2e8f0;
+}
+
+/* ---- Sidebar — glassmorph dark ---- */
+section[data-testid="stSidebar"] {
+    background: rgba(15, 23, 42, 0.55) !important;
+    backdrop-filter: blur(14px) saturate(140%);
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
+    border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+section[data-testid="stSidebar"] > div {
+    background: transparent !important;
+}
+section[data-testid="stSidebar"] [data-testid="stImage"] {
+    display: flex !important;
+    justify-content: center !important;
+    width: 100% !important;
+}
+section[data-testid="stSidebar"] [data-testid="stImage"] img {
+    display: block !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+}
+.sidebar-brand-title {
+    color: #f1f5f9 !important;
+    font-family: 'Clash Grotesk', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif !important;
+    font-size: 1.35rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 0 !important;
+    line-height: 1.2 !important;
+    margin: 0.4rem 0 0.75rem !important;
+}
+.main-chat-title {
+    color: #f1f5f9 !important;
+    font-family: 'Clash Grotesk', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif !important;
+    font-size: 1.875rem !important;
+    font-weight: 600 !important;
+    letter-spacing: 0 !important;
+    line-height: 1.2 !important;
+    margin: 0 0 1rem !important;
+}
+section[data-testid="stSidebar"] h3,
+section[data-testid="stSidebar"] h2,
+section[data-testid="stSidebar"] h1 {
+    color: #f1f5f9 !important;
+    font-size: 0.95rem !important;
+    font-weight: 600 !important;
+    margin-bottom: 0.25rem !important;
+}
+section[data-testid="stSidebar"] [data-testid="stCaptionContainer"] {
+    color: #64748b !important;
+    font-size: 0.75rem !important;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+section[data-testid="stSidebar"] hr,
+section[data-testid="stSidebar"] [data-testid="stDivider"] {
+    border-color: rgba(255, 255, 255, 0.08) !important;
+    background: rgba(255, 255, 255, 0.08) !important;
+    margin: 0.6rem 0 !important;
+}
+
+/* ---- Primary "New chat" button (sidebar primary) ---- */
+section[data-testid="stSidebar"] .stButton button[kind="primary"] {
+    background: rgba(99, 102, 241, 0.18) !important;
+    border: 1px solid rgba(129, 140, 248, 0.35) !important;
+    color: #e0e7ff !important;
+    font-weight: 500 !important;
+    border-radius: 0.75rem !important;
+    box-shadow: none !important;
+    padding: 0.55rem 1rem !important;
+    transition: background-color 0.15s ease, border-color 0.15s ease !important;
+}
+section[data-testid="stSidebar"] .stButton button[kind="primary"]:hover {
+    background: rgba(99, 102, 241, 0.28) !important;
+    border-color: rgba(129, 140, 248, 0.5) !important;
+}
+
+/* ---- Chat row buttons ---- */
+.stApp [class*="st-key-open_"] button,
+.stApp [class*="st-key-open-"] button {
+    background: transparent !important;
+    border: 1px solid transparent !important;
+    box-shadow: none !important;
+    color: #f1f5f9 !important;
+    justify-content: flex-start !important;
+    align-items: flex-start !important;
+    text-align: left !important;
+    width: 100% !important;
+    padding: 0.55rem 0.7rem !important;
+    border-radius: 0.5rem !important;
+    line-height: 1.35 !important;
+}
+.stApp [class*="st-key-open_"] button > *,
+.stApp [class*="st-key-open-"] button > * {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    margin-left: 0 !important;
+    margin-right: auto !important;
+    text-align: left !important;
+}
+.stApp [class*="st-key-open_"] button:hover,
+.stApp [class*="st-key-open-"] button:hover {
+    background: rgba(255, 255, 255, 0.05) !important;
+}
+.stApp [class*="st-key-open_active_"] button,
+.stApp [class*="st-key-open-active-"] button {
+    background: rgba(255, 255, 255, 0.1) !important;
+    border-color: rgba(255, 255, 255, 0.2) !important;
+}
+.stApp [class*="st-key-open_"] button [data-testid="stMarkdownContainer"],
+.stApp [class*="st-key-open-"] button [data-testid="stMarkdownContainer"],
+.stApp [class*="st-key-open_"] button [data-testid="stMarkdownContainer"] *,
+.stApp [class*="st-key-open-"] button [data-testid="stMarkdownContainer"] * {
+    display: block !important;
+    text-align: left !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-left: 0 !important;
+    margin-right: auto !important;
+}
+
+/* ---- Icon buttons (rename / delete) ---- */
 .stApp [class*="st-key-rename_"],
 .stApp [class*="st-key-delete_"] {
     display: flex !important;
@@ -142,44 +357,403 @@ st.markdown(
     background: transparent !important;
     border: none !important;
     box-shadow: none !important;
-    color: rgba(0, 0, 0, 0.45) !important;
+    color: #64748b !important;
     padding: 0 !important;
-    min-width: 36px !important;
-    width: 36px !important;
-    max-width: 36px !important;
-    height: 36px !important;
-    font-size: 16px !important;
+    min-width: 32px !important;
+    width: 32px !important;
+    max-width: 32px !important;
+    height: 32px !important;
+    font-size: 14px !important;
     line-height: 1 !important;
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
-    border-radius: 50% !important;
+    border-radius: 0.375rem !important;
     margin: 0 !important;
     flex: none !important;
-    transition: background-color 0.1s ease !important;
+    transition: background-color 0.12s ease, color 0.12s ease !important;
 }
-.stApp [class*="st-key-rename_"] button:hover,
+.stApp [class*="st-key-rename_"] button:hover {
+    background: rgba(255, 255, 255, 0.08) !important;
+    color: #e2e8f0 !important;
+}
 .stApp [class*="st-key-delete_"] button:hover {
-    background: rgba(0, 0, 0, 0.08) !important;
-    color: rgba(0, 0, 0, 0.9) !important;
+    background: rgba(255, 255, 255, 0.08) !important;
+    color: #fca5a5 !important;
 }
 .stApp [class*="st-key-rename_"] button p,
 .stApp [class*="st-key-delete_"] button p {
     line-height: 1 !important;
-    font-size: 16px !important;
+    font-size: 14px !important;
     margin: 0 !important;
     text-align: center !important;
     justify-content: center !important;
+    color: inherit !important;
 }
 
-/* Keep the horizontal row tidy */
+.stApp [class*="st-key-rename-"] button,
+.stApp [class*="st-key-delete-"] button {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    color: #64748b !important;
+    padding: 0 !important;
+    min-width: 32px !important;
+    width: 32px !important;
+    max-width: 32px !important;
+    height: 32px !important;
+    min-height: 32px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 0.375rem !important;
+    margin: 0 !important;
+}
+.stApp [class*="st-key-rename-"] button p,
+.stApp [class*="st-key-delete-"] button p,
+.stApp [class*="st-key-rename-"] button span,
+.stApp [class*="st-key-delete-"] button span {
+    margin: 0 !important;
+    width: auto !important;
+    text-align: center !important;
+    line-height: 1 !important;
+    color: inherit !important;
+}
+section[data-testid="stSidebar"] button:has(span[class*="material"]) {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    min-width: 32px !important;
+    width: 32px !important;
+    max-width: 32px !important;
+    height: 32px !important;
+    min-height: 32px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+section[data-testid="stSidebar"] button:has(span[class*="material"]) [data-testid="stMarkdownContainer"],
+section[data-testid="stSidebar"] button:has(span[class*="material"]) p,
+section[data-testid="stSidebar"] button:has(span[class*="material"]) span {
+    margin: 0 !important;
+    width: auto !important;
+    text-align: center !important;
+    line-height: 1 !important;
+}
+
 section[data-testid="stSidebar"] [data-testid="stHorizontalBlock"] {
     align-items: center;
     background: transparent !important;
+    gap: 0.25rem !important;
+}
+
+/* Sidebar search input — compact, slate-950 bg */
+section[data-testid="stSidebar"] [data-testid="stTextInput"] {
+    margin-top: 0.5rem !important;
+    margin-bottom: 0.25rem !important;
+}
+section[data-testid="stSidebar"] [data-testid="stTextInput"] input {
+    background: rgba(2, 6, 23, 0.5) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    color: #f1f5f9 !important;
+    border-radius: 0.5rem !important;
+    padding: 0.45rem 0.7rem !important;
+    font-size: 0.85rem !important;
+}
+section[data-testid="stSidebar"] [data-testid="stTextInput"] input::placeholder {
+    color: #64748b !important;
+}
+section[data-testid="stSidebar"] [data-testid="stTextInput"] input:focus {
+    border-color: rgba(255, 255, 255, 0.2) !important;
+    box-shadow: none !important;
+}
+
+/* ---- Chat messages ---- */
+.stApp [data-testid="stChatMessage"] {
+    background: transparent !important;
+    border: none !important;
+    padding: 0.25rem 0 !important;
+    margin-bottom: 0.5rem !important;
+    gap: 0.35rem !important;
+    column-gap: 0.35rem !important;
+    align-items: flex-start !important;
+}
+.stApp [data-testid="stChatMessage"] > * {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+}
+
+/* Default bubble look (assistant — slate glass). Covers all messages,
+   then user-specific selectors below override with indigo + row-reverse. */
+.stApp [data-testid="stChatMessage"] [data-testid="stChatMessageContent"] {
+    background: rgba(15, 23, 42, 0.6) !important;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    color: #f1f5f9 !important;
+    border-radius: 1rem !important;
+    padding: 0.85rem 1.1rem !important;
+    max-width: min(88%, 58rem) !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+}
+
+/* User bubble — indigo tint, right-aligned. Cover every known Streamlit
+   chat-message DOM shape: testid variants + class-based fallbacks. */
+.stApp [data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]),
+.stApp [data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]),
+.stApp [data-testid="stChatMessage"]:has([aria-label="user avatar"]),
+.stApp .stChatMessage--user,
+.stApp [data-testid="stChatMessageUser"] {
+    flex-direction: row-reverse !important;
+    justify-content: flex-start !important;
+}
+.stApp [data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) [data-testid="stChatMessageContent"],
+.stApp [data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]) [data-testid="stChatMessageContent"],
+.stApp [data-testid="stChatMessage"]:has([aria-label="user avatar"]) [data-testid="stChatMessageContent"],
+.stApp .stChatMessage--user [data-testid="stChatMessageContent"],
+.stApp [data-testid="stChatMessageUser"] [data-testid="stChatMessageContent"] {
+    background: rgba(99, 102, 241, 0.2) !important;
+    border: 1px solid rgba(129, 140, 248, 0.25) !important;
+    color: #ffffff !important;
+}
+
+/* Avatars — gradient circle */
+.stApp [data-testid="stChatMessageAvatarAssistant"],
+.stApp [data-testid="stChatMessageAvatarUser"],
+.stApp [data-testid="stChatMessageAvatarCustom"] {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.3), rgba(168, 85, 247, 0.3)) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    color: #c7d2fe !important;
+    width: 2rem !important;
+    height: 2rem !important;
+    border-radius: 50% !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 0.85rem !important;
+    margin: 0 !important;
+    flex: none !important;
+}
+
+/* Message text — markdown inside */
+.stApp [data-testid="stChatMessageContent"] p,
+.stApp [data-testid="stChatMessageContent"] li,
+.stApp [data-testid="stChatMessageContent"] span {
+    color: inherit !important;
+    line-height: 1.55 !important;
+}
+.stApp [data-testid="stChatMessageContent"] code {
+    background: rgba(15, 23, 42, 0.5) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    color: #c7d2fe !important;
+    padding: 0.1rem 0.35rem !important;
+    border-radius: 0.25rem !important;
+    font-size: 0.85em !important;
+}
+.stApp [data-testid="stChatMessageContent"] pre {
+    background: rgba(2, 6, 23, 0.6) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 0.5rem !important;
+}
+.stApp [data-testid="stChatMessageContent"] a {
+    color: #93c5fd !important;
+}
+.stApp [data-testid="stChatMessageContent"] table {
+    background: rgba(2, 6, 23, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 0.75rem;
+    overflow: hidden;
+}
+.stApp [data-testid="stChatMessageContent"] th {
+    background: rgba(255, 255, 255, 0.06) !important;
+    color: #cbd5e1 !important;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-size: 0.7rem !important;
+}
+.stApp [data-testid="stChatMessageContent"] td {
+    color: #e2e8f0 !important;
+    border-color: rgba(255, 255, 255, 0.06) !important;
+}
+
+/* ---- Chat input (bottom composer) ---- */
+.stApp [data-testid="stChatInput"] {
+    background: rgba(15, 23, 42, 0.5) !important;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 1rem !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+.stApp [data-testid="stChatInput"] textarea {
+    background: transparent !important;
+    color: #f1f5f9 !important;
+    caret-color: #c7d2fe !important;
+}
+.stApp [data-testid="stChatInput"] textarea::placeholder {
+    color: #64748b !important;
+}
+.stApp [data-testid="stChatInput"] button {
+    background: rgba(99, 102, 241, 0.2) !important;
+    border: 1px solid rgba(129, 140, 248, 0.35) !important;
+    color: #c7d2fe !important;
+    border-radius: 0.6rem !important;
+    transition: background-color 0.15s ease;
+}
+.stApp [data-testid="stChatInput"] button:hover {
+    background: rgba(99, 102, 241, 0.3) !important;
+}
+.stApp [data-testid="stChatInput"] svg {
+    fill: #c7d2fe !important;
+}
+
+/* Sticky bottom anchoring for composer */
+.stApp [data-testid="stBottomBlockContainer"] {
+    background: transparent !important;
+    max-width: 78rem !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+}
+
+/* ---- Clarification chips (main-area buttons) ---- */
+.stApp [class*="st-key-chip_"] button {
+    background: rgba(99, 102, 241, 0.15) !important;
+    border: 1px solid rgba(129, 140, 248, 0.3) !important;
+    color: #e0e7ff !important;
+    border-radius: 9999px !important;
+    padding: 0.35rem 1rem !important;
+    font-size: 0.85rem !important;
+    box-shadow: none !important;
+    transition: background-color 0.15s ease, border-color 0.15s ease !important;
+}
+.stApp [class*="st-key-chip_"] button:hover {
+    background: rgba(99, 102, 241, 0.25) !important;
+    border-color: rgba(129, 140, 248, 0.5) !important;
+}
+
+/* ---- Expanders (Sources / Flagged claims) ---- */
+.stApp [data-testid="stExpander"] {
+    background: rgba(15, 23, 42, 0.4) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 0.75rem !important;
+    margin-top: 0.5rem;
+}
+.stApp [data-testid="stExpander"] summary,
+.stApp [data-testid="stExpander"] [data-testid="stExpanderToggleIcon"] {
+    color: #c7d2fe !important;
+    font-size: 0.8rem !important;
+}
+.stApp [data-testid="stExpander"] p {
+    color: #cbd5e1 !important;
+}
+.stApp [data-testid="stExpander"] hr {
+    border-color: rgba(255, 255, 255, 0.06) !important;
+}
+
+/* ---- Dialog (rename / delete modals) ---- */
+.stApp [role="dialog"],
+.stApp [data-testid="stDialog"] {
+    background: rgba(15, 23, 42, 0.95) !important;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 1rem !important;
+}
+.stApp [role="dialog"] h2,
+.stApp [data-testid="stDialog"] h2 {
+    color: #f1f5f9 !important;
+}
+.stApp [data-testid="stTextInput"] input {
+    background: rgba(2, 6, 23, 0.6) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    color: #f1f5f9 !important;
+    border-radius: 0.5rem !important;
+}
+.stApp [data-testid="stTextInput"] input:focus {
+    border-color: rgba(255, 255, 255, 0.25) !important;
+    box-shadow: none !important;
+}
+
+/* Generic primary buttons in dialogs (Save / Delete) */
+.stApp [role="dialog"] .stButton button[kind="primary"],
+.stApp [data-testid="stDialog"] .stButton button[kind="primary"] {
+    background: rgba(99, 102, 241, 0.25) !important;
+    border: 1px solid rgba(129, 140, 248, 0.4) !important;
+    color: #e0e7ff !important;
+    border-radius: 0.6rem !important;
+    box-shadow: none !important;
+}
+.stApp [role="dialog"] .stButton button[kind="primary"]:hover,
+.stApp [data-testid="stDialog"] .stButton button[kind="primary"]:hover {
+    background: rgba(99, 102, 241, 0.35) !important;
+}
+/* Secondary dialog buttons */
+.stApp [role="dialog"] .stButton button:not([kind="primary"]),
+.stApp [data-testid="stDialog"] .stButton button:not([kind="primary"]) {
+    background: transparent !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    color: #cbd5e1 !important;
+    border-radius: 0.6rem !important;
+    box-shadow: none !important;
+}
+.stApp [role="dialog"] .stButton button:not([kind="primary"]):hover,
+.stApp [data-testid="stDialog"] .stButton button:not([kind="primary"]):hover {
+    background: rgba(255, 255, 255, 0.05) !important;
+}
+
+/* ---- Spinner color ---- */
+.stApp .stSpinner > div {
+    border-top-color: #818cf8 !important;
+}
+
+/* ---- Scrollbars ---- */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+/* ---- Intro image — soft glow ring ---- */
+.stApp [data-testid="stImage"] img {
+    filter: drop-shadow(0 0 40px rgba(56, 189, 248, 0.18));
+}
+
+/* ---- Gate / login form — match dark theme ---- */
+.stApp [data-testid="stForm"] {
+    background: rgba(15, 23, 42, 0.5) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 1rem !important;
+    backdrop-filter: blur(12px);
+}
+.stApp [data-testid="stForm"] .stButton button {
+    background: rgba(99, 102, 241, 0.25) !important;
+    border: 1px solid rgba(129, 140, 248, 0.4) !important;
+    color: #e0e7ff !important;
+    border-radius: 0.6rem !important;
+    width: 100%;
+}
+
+/* ---- Markdown emphasis colors in main area ---- */
+.stApp strong { color: #f8fafc !important; }
+.stApp em { color: #e2e8f0 !important; }
+.stApp blockquote {
+    border-left: 3px solid rgba(129, 140, 248, 0.4) !important;
+    background: rgba(99, 102, 241, 0.05);
+    color: #cbd5e1 !important;
 }
 </style>
 """,
-    unsafe_allow_html=True,
 )
 
 
@@ -216,6 +790,55 @@ def _fmt_time(iso_str: Optional[str]) -> str:
         return dt.astimezone(_DISPLAY_TZ).strftime("%b %d, %H:%M")
     except Exception:
         return iso_str
+
+
+def _relative_time(iso_str: Optional[str]) -> str:
+    """Human-friendly relative time: 'just now', '5m ago', '2h ago', '3d ago'."""
+    if not iso_str:
+        return ""
+    try:
+        dt = datetime.fromisoformat(iso_str.replace("Z", "+00:00")).astimezone(_DISPLAY_TZ)
+    except Exception:
+        return iso_str
+    now = datetime.now(_DISPLAY_TZ)
+    diff = now - dt
+    secs = int(diff.total_seconds())
+    if secs < 60:
+        return "just now"
+    mins = secs // 60
+    if mins < 60:
+        return f"{mins}m ago"
+    hrs = mins // 60
+    if hrs < 24:
+        return f"{hrs}h ago"
+    days = hrs // 24
+    if days < 7:
+        return f"{days}d ago"
+    return dt.strftime("%b %d")
+
+
+def _bucket_session(iso_str: Optional[str]) -> str:
+    """Group a session by last-message recency. Matches KARR AI bucketing."""
+    if not iso_str:
+        return "Older"
+    try:
+        dt = datetime.fromisoformat(iso_str.replace("Z", "+00:00")).astimezone(_DISPLAY_TZ)
+    except Exception:
+        return "Older"
+    now = datetime.now(_DISPLAY_TZ)
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    yesterday_start = today_start - timedelta(days=1)
+    week_start = today_start - timedelta(days=7)
+    if dt >= today_start:
+        return "Today"
+    if dt >= yesterday_start:
+        return "Yesterday"
+    if dt >= week_start:
+        return "Previous 7 days"
+    return "Older"
+
+
+_GROUP_ORDER = ("Today", "Yesterday", "Previous 7 days", "Older")
 
 
 def _ensure_current_session() -> str:
@@ -278,12 +901,6 @@ def _render_assistant_meta(metadata: Dict[str, Any]) -> None:
                 st.caption(claim)
 
 
-def _render_intro_image() -> None:
-    """Render the Code Charlie intro image when the asset is available."""
-    if INTRO_IMAGE_PATH.exists():
-        st.image(str(INTRO_IMAGE_PATH), width=320)
-
-
 def _invoke_for_pending(session_id: str, text: str) -> None:
     """Run the graph for the pending user message and persist sidebar metadata."""
     row = get_session(session_id)
@@ -330,56 +947,85 @@ def _invoke_for_pending(session_id: str, text: str) -> None:
 # =============================================================================
 
 with st.sidebar:
-    st.markdown("### Code Charlie")
-    st.caption("Building-code compliance research")
+    if INTRO_IMAGE_PATH.exists():
+        st.image(str(INTRO_IMAGE_PATH), width=220)
+
+    st.html('<div class="sidebar-brand-title">Code Charlie</div>')
+    st.html('<div class="sidebar-brand-caption">Powered by Medha 1.0 - KARR AI</div>')
 
     if st.button("＋ New chat", use_container_width=True, type="primary"):
-        row = create_session()
-        sid = row["id"]
-        initialize_code_charlie_session_checkpoint(session_id=sid, user_id=settings.GATE_USER_ID)
-        st.session_state["current_session_id"] = sid
-        st.session_state.pop("pending_prompt", None)
-        st.rerun()
+        try:
+            row = create_session()
+            sid = row["id"]
+            initialize_code_charlie_session_checkpoint(session_id=sid, user_id=settings.GATE_USER_ID)
+            st.session_state["current_session_id"] = sid
+            st.session_state.pop("pending_prompt", None)
+            st.session_state.pop("_checkpoint_error", None)
+            st.rerun()
+        except Exception as exc:
+            logger.exception("Failed to create Code Charlie session")
+            st.session_state["_checkpoint_error"] = _checkpoint_error_message(exc)
+            st.rerun()
+
+    search_query = st.text_input(
+        "Search",
+        key="sidebar_search",
+        placeholder="Search chats…",
+        label_visibility="collapsed",
+    )
 
     st.divider()
-    st.caption("Recent sessions")
 
     sessions = list_sessions(limit=50)
     current_id = st.session_state.get("current_session_id")
 
-    if not sessions:
-        st.caption("_No sessions yet._")
-    else:
-        for s in sessions:
-            sid = s["id"]
-            is_current = sid == current_id
-            title = s.get("title") or "Untitled chat"
-            subtitle_bits = []
-            if s.get("scope_code"):
-                subtitle_bits.append(s["scope_code"])
-            subtitle_bits.append(_fmt_time(s.get("last_message_at")))
-            subtitle = " · ".join(b for b in subtitle_bits if b)
+    q = (search_query or "").strip().lower()
+    if q:
+        sessions = [s for s in sessions if q in (s.get("title") or "").lower()]
 
-            row_cols = st.columns([0.74, 0.13, 0.13])
-            with row_cols[0]:
-                label = f"**{title}**\n\n{subtitle}" if subtitle else f"**{title}**"
-                if st.button(
-                    label,
-                    key=f"open_{sid}",
-                    use_container_width=True,
-                    type="tertiary",
-                ):
-                    st.session_state["current_session_id"] = sid
-                    st.session_state.pop("pending_prompt", None)
-                    st.rerun()
-            with row_cols[1]:
-                if st.button("✎", key=f"rename_{sid}", help="Rename"):
-                    st.session_state["_rename_target"] = {"sid": sid, "title": s.get("title") or ""}
-                    st.rerun()
-            with row_cols[2]:
-                if st.button("🗑", key=f"delete_{sid}", help="Delete"):
-                    st.session_state["_delete_target"] = {"sid": sid, "title": title}
-                    st.rerun()
+    if not sessions:
+        st.caption("_No matching chats._" if q else "_No sessions yet._")
+    else:
+        grouped: Dict[str, List[Dict[str, Any]]] = {g: [] for g in _GROUP_ORDER}
+        for s in sessions:
+            grouped[_bucket_session(s.get("last_message_at"))].append(s)
+
+        for group in _GROUP_ORDER:
+            bucket = grouped[group]
+            if not bucket:
+                continue
+            st.caption(group)
+            for s in bucket:
+                sid = s["id"]
+                is_current = sid == current_id
+                title = s.get("title") or "Untitled chat"
+                subtitle_bits = []
+                if s.get("scope_code"):
+                    subtitle_bits.append(s["scope_code"])
+                subtitle_bits.append(_relative_time(s.get("last_message_at")))
+                subtitle = " · ".join(b for b in subtitle_bits if b)
+
+                row_cols = st.columns([0.74, 0.13, 0.13])
+                with row_cols[0]:
+                    label = f"**{title}**\n\n{subtitle}" if subtitle else f"**{title}**"
+                    btn_key = f"open_active_{sid}" if is_current else f"open_{sid}"
+                    if st.button(
+                        label,
+                        key=btn_key,
+                        use_container_width=True,
+                        type="tertiary",
+                    ):
+                        st.session_state["current_session_id"] = sid
+                        st.session_state.pop("pending_prompt", None)
+                        st.rerun()
+                with row_cols[1]:
+                    if st.button(":material/edit:", key=f"rename_{sid}", help="Rename", type="tertiary"):
+                        st.session_state["_rename_target"] = {"sid": sid, "title": s.get("title") or ""}
+                        st.rerun()
+                with row_cols[2]:
+                    if st.button(":material/delete:", key=f"delete_{sid}", help="Delete", type="tertiary"):
+                        st.session_state["_delete_target"] = {"sid": sid, "title": title}
+                        st.rerun()
 
 
 # Rename + delete modals (dialogs) — open when a target session is queued.
@@ -425,16 +1071,42 @@ if _delete_target:
     _delete_dialog()
 
 
+def _render_checkpoint_error(details: str) -> None:
+    st.title("Code Charlie")
+    st.error("Code Charlie cannot connect to the chat database right now.")
+    st.caption(
+        "This usually means the Supabase/Postgres pooler is unreachable, "
+        "temporarily out of connections, or the DATABASE_URL credentials need checking."
+    )
+    st.code(details, language="text")
+    if st.button("Retry database connection", type="primary"):
+        _warm_graph.clear()
+        st.session_state.pop("_checkpoint_error", None)
+        st.session_state.pop("_warmed", None)
+        st.rerun()
+
+
 # =============================================================================
 # Main chat area
 # =============================================================================
 
-current_session_id = _ensure_current_session()
-state = get_code_charlie_state(current_session_id) or {}
+checkpoint_error = st.session_state.get("_checkpoint_error")
+if checkpoint_error:
+    _render_checkpoint_error(checkpoint_error)
+    st.stop()
+
+try:
+    current_session_id = _ensure_current_session()
+    state = get_code_charlie_state(current_session_id) or {}
+except Exception as exc:
+    logger.exception("Failed to load Code Charlie checkpoint state")
+    _render_checkpoint_error(_checkpoint_error_message(exc))
+    st.stop()
+
 messages = _normalize_messages(state.get("messages", []))
 
-st.title("Code Charlie")
-st.caption("Ask compliance questions across DBC, CIBSE, EN 81, BCO, ASME/ADA/IBC, HTM, ISO, DoH, BMU, CSI, Machinery Directive.")
+st.html('<h1 class="main-chat-title">Code Charlie</h1>')
+#st.caption("Ask compliance questions across DBC, CIBSE, EN 81, BCO, ASME/ADA/IBC, HTM, ISO, DoH, BMU, CSI, Machinery Directive.")
 
 # Render existing history
 for m in messages:
@@ -443,8 +1115,6 @@ for m in messages:
     metadata = m.get("metadata") or {}
 
     with st.chat_message("user" if role == "user" else "assistant"):
-        if role == "assistant" and content == INTRO_MESSAGE_CONTENT:
-            _render_intro_image()
         st.markdown(content)
         if role == "assistant" and metadata:
             _render_assistant_meta(metadata)
@@ -459,7 +1129,12 @@ if pending_prompt and pending_prompt.get("session_id") == current_session_id:
         st.markdown(text)
     with st.chat_message("assistant"):
         with st.spinner("Researching…"):
-            _invoke_for_pending(current_session_id, text)
+            try:
+                _invoke_for_pending(current_session_id, text)
+            except Exception as exc:
+                logger.exception("Code Charlie turn failed")
+                st.session_state["_checkpoint_error"] = _checkpoint_error_message(exc)
+                st.error("The chat database connection failed while processing this message.")
     st.session_state.pop("pending_prompt", None)
     st.rerun()
 

@@ -64,25 +64,36 @@ def get_checkpointer() -> PostgresSaver:
 
         logger.info("Initializing PostgreSQL checkpointer...")
 
-        _db_pool = ConnectionPool(
-            conninfo=db_url,
-            kwargs={
-                "autocommit": True,
-                "row_factory": dict_row,
-                "prepare_threshold": 0,
-            },
-            min_size=settings.CHECKPOINT_POOL_MIN_SIZE,
-            max_size=settings.CHECKPOINT_POOL_MAX_SIZE,
-            timeout=settings.CHECKPOINT_POOL_TIMEOUT_SECONDS,
-            max_idle=settings.CHECKPOINT_POOL_MAX_IDLE_SECONDS,
-            max_lifetime=settings.CHECKPOINT_POOL_MAX_LIFETIME_SECONDS,
-            check=_pool_check,
-            open=True,
-        )
-        _db_pool.wait(timeout=settings.CHECKPOINT_POOL_TIMEOUT_SECONDS)
+        try:
+            _db_pool = ConnectionPool(
+                conninfo=db_url,
+                kwargs={
+                    "autocommit": True,
+                    "row_factory": dict_row,
+                    "prepare_threshold": 0,
+                },
+                min_size=settings.CHECKPOINT_POOL_MIN_SIZE,
+                max_size=settings.CHECKPOINT_POOL_MAX_SIZE,
+                timeout=settings.CHECKPOINT_POOL_TIMEOUT_SECONDS,
+                max_idle=settings.CHECKPOINT_POOL_MAX_IDLE_SECONDS,
+                max_lifetime=settings.CHECKPOINT_POOL_MAX_LIFETIME_SECONDS,
+                check=_pool_check,
+                open=True,
+            )
+            _db_pool.wait(timeout=settings.CHECKPOINT_POOL_TIMEOUT_SECONDS)
 
-        _checkpointer = PostgresSaver(_db_pool)
-        _checkpointer.setup()
+            _checkpointer = PostgresSaver(_db_pool)
+            _checkpointer.setup()
+        except Exception:
+            logger.exception("PostgreSQL checkpointer initialization failed")
+            if _db_pool is not None:
+                try:
+                    _db_pool.close(timeout=2.0)
+                except Exception:
+                    pass
+            _db_pool = None
+            _checkpointer = None
+            raise
 
         logger.info("PostgreSQL checkpointer initialized successfully")
 
