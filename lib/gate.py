@@ -12,7 +12,7 @@ import streamlit as st
 
 from core.config import settings
 
-INTRO_IMAGE_PATH = Path(__file__).resolve().parents[1] / "pwgateimg.png"
+INTRO_IMAGE_PATH = Path(__file__).resolve().parents[1] / "code-charlie.png"
 DISPLAY_FONT_PATH = (
     Path(__file__).resolve().parents[1]
     / "assets"
@@ -176,7 +176,7 @@ def require_password() -> bool:
     )
     st.markdown(
         "<p class='gate-description'>"
-        "Building-code Compliance Research"
+        "Vertical Transportation (VT) Building-code Compliance Research"
         "</p>",
         unsafe_allow_html=True,
     )
