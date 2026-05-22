@@ -136,6 +136,29 @@ if display_font_data_uri:
 
 st.html(
     """
+<script>
+/* Hard-remove the Streamlit Cloud "profile chip" + "Hosted with Streamlit"
+   badge. CSS hides may lose to overlay inline styles; nuking the nodes
+   wins. MutationObserver re-runs on every DOM change since the cloud
+   overlay can re-inject these elements after navigation. */
+(function () {
+  var SELECTORS = [
+    '[class*="_profileContainer_"]',
+    '[class*="_viewerBadge_"]',
+    'a[href*="streamlit.io/cloud"]'
+  ].join(',');
+  function nuke() {
+    document.querySelectorAll(SELECTORS).forEach(function (el) { el.remove(); });
+  }
+  nuke();
+  try {
+    new MutationObserver(nuke).observe(document.documentElement, {
+      childList: true,
+      subtree: true
+    });
+  } catch (e) {}
+})();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
