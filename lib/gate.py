@@ -176,7 +176,7 @@ def require_password() -> bool:
     )
     st.markdown(
         "<p class='gate-description'>"
-        "Building-code compliance research only"
+        "Building-code Compliance Research"
         "</p>",
         unsafe_allow_html=True,
     )

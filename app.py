@@ -306,14 +306,42 @@ section[data-testid="stSidebar"] [data-testid="stImage"] img {
     margin-left: auto !important;
     margin-right: auto !important;
 }
+.sidebar-brand-image {
+    display: block !important;
+    width: 220px !important;
+    max-width: 100% !important;
+    height: auto !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    margin-bottom: 0.5rem !important;
+    border-radius: 0.5rem !important;
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: auto;
+}
+/* Center the stHtml wrapper that holds the brand image. */
+section[data-testid="stSidebar"] [data-testid="stHtml"]:has(> .sidebar-brand-image) {
+    display: flex !important;
+    justify-content: center !important;
+    width: 100% !important;
+}
 .sidebar-brand-title {
     color: #f1f5f9 !important;
     font-family: 'Clash Grotesk', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif !important;
-    font-size: 1.35rem !important;
-    font-weight: 700 !important;
+    font-size: 1.7rem !important;
+    font-weight: 600 !important;
     letter-spacing: 0 !important;
     line-height: 1.2 !important;
-    margin: 0.4rem 0 0.75rem !important;
+    margin: 0.4rem 0 0.2rem !important;
+}
+.sidebar-brand-subtitle {
+    color: #ffffff !important;
+    font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif !important;
+    font-size: 0.95rem !important;
+    font-weight: 500 !important;
+    letter-spacing: 0 !important;
+    line-height: 1.3 !important;
+    margin: 0 0 0.95rem !important;
+    text-transform: none !important;
 }
 .main-chat-title {
     color: #f1f5f9 !important;
@@ -391,8 +419,18 @@ section[data-testid="stSidebar"] .stButton button[kind="primary"]:hover {
 }
 .stApp [class*="st-key-open_active_"] button,
 .stApp [class*="st-key-open-active-"] button {
-    background: rgba(255, 255, 255, 0.1) !important;
-    border-color: rgba(255, 255, 255, 0.2) !important;
+    background: rgba(99, 102, 241, 0.18) !important;
+    border-color: rgba(129, 140, 248, 0.4) !important;
+    box-shadow: inset 3px 0 0 0 rgba(129, 140, 248, 0.9) !important;
+}
+.stApp [class*="st-key-open_active_"] button:hover,
+.stApp [class*="st-key-open-active-"] button:hover {
+    background: rgba(99, 102, 241, 0.26) !important;
+    border-color: rgba(129, 140, 248, 0.55) !important;
+}
+.stApp [class*="st-key-open_active_"] button strong,
+.stApp [class*="st-key-open-active-"] button strong {
+    color: #ffffff !important;
 }
 .stApp [class*="st-key-open_"] button [data-testid="stMarkdownContainer"],
 .stApp [class*="st-key-open-"] button [data-testid="stMarkdownContainer"],
@@ -454,7 +492,9 @@ section[data-testid="stSidebar"] button[data-testid="stBaseButton-tertiary"] [da
     min-width: 32px !important;
     width: 32px !important;
     max-width: 32px !important;
+    min-height: 32px !important;
     height: 32px !important;
+    max-height: 32px !important;
     font-size: 14px !important;
     line-height: 1 !important;
     display: inline-flex !important;
@@ -462,16 +502,99 @@ section[data-testid="stSidebar"] button[data-testid="stBaseButton-tertiary"] [da
     justify-content: center !important;
     border-radius: 0.375rem !important;
     margin: 0 !important;
-    flex: none !important;
+    flex: 0 0 32px !important;
+    align-self: center !important;
     transition: background-color 0.12s ease, color 0.12s ease !important;
 }
-.stApp [class*="st-key-rename_"] button:hover {
-    background: rgba(255, 255, 255, 0.08) !important;
-    color: #e2e8f0 !important;
+/* Center the icon button wrapper within its column row so the 32×32 button
+   doesn't stretch when the adjacent open-button col is taller (active row). */
+.stApp [class*="st-key-rename_"],
+.stApp [class*="st-key-delete_"] {
+    align-self: center !important;
 }
-.stApp [class*="st-key-delete_"] button:hover {
-    background: rgba(255, 255, 255, 0.08) !important;
+section[data-testid="stSidebar"] [data-testid="stHorizontalBlock"],
+section[data-testid="stSidebar"] [data-testid="stColumn"] {
+    align-items: center !important;
+}
+
+/* Icon button compact 32×32, right-aligned in its column so spacing
+   between the title block and the icons stays even when the sidebar is
+   resized. No hover bg, so no need to stretch. */
+section[data-testid="stSidebar"] [class*="st-key-rename_"] button[data-testid="stBaseButton-secondary"],
+section[data-testid="stSidebar"] [class*="st-key-delete_"] button[data-testid="stBaseButton-secondary"],
+section[data-testid="stSidebar"] [class*="st-key-rename_"] button,
+section[data-testid="stSidebar"] [class*="st-key-delete_"] button {
+    width: 32px !important;
+    min-width: 32px !important;
+    max-width: 32px !important;
+    height: 32px !important;
+    min-height: 32px !important;
+    max-height: 32px !important;
+    padding: 0 !important;
+    line-height: 1 !important;
+    flex: 0 0 32px !important;
+    align-self: center !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+/* Wrapper centers button vertically + pushes it to the right edge of its
+   column (flex-end) so the gap is equal on both sides of the icon row. */
+section[data-testid="stSidebar"] [class*="st-key-rename_"],
+section[data-testid="stSidebar"] [class*="st-key-delete_"] {
+    align-self: center !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    width: 100% !important;
+}
+/* Add breathing room between the chat title and the icon buttons so a
+   long title doesn't run flush into the pencil icon when the sidebar is
+   narrow. Padding lives on the open button + a left margin on the first
+   icon column. */
+section[data-testid="stSidebar"] button[data-testid="stBaseButton-tertiary"] {
+    padding-right: 0.5rem !important;
+}
+section[data-testid="stSidebar"] [class*="st-key-rename_"] {
+    margin-left: 1rem !important;
+}
+section[data-testid="stSidebar"] [class*="st-key-delete_"] {
+    margin-left: 0.35rem !important;
+}
+/* Center the icon glyph inside the now-stretched icon button. The button
+   wraps: button > div > span[stIconMaterial]. Streamlit positions the
+   inner div top-left by default; flatten every level to center. */
+section[data-testid="stSidebar"] [class*="st-key-rename_"] button > *,
+section[data-testid="stSidebar"] [class*="st-key-delete_"] button > *,
+section[data-testid="stSidebar"] [class*="st-key-rename_"] button > * > *,
+section[data-testid="stSidebar"] [class*="st-key-delete_"] button > * > * {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 100% !important;
+    height: 100% !important;
+    margin: 0 !important;
+}
+section[data-testid="stSidebar"] [class*="st-key-rename_"] [data-testid="stIconMaterial"],
+section[data-testid="stSidebar"] [class*="st-key-delete_"] [data-testid="stIconMaterial"] {
+    margin: 0 auto !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+.stApp [class*="st-key-rename_"] button:hover,
+.stApp [class*="st-key-rename_"] button:focus,
+.stApp [class*="st-key-rename_"] button:active {
+    background: transparent !important;
+    color: #e2e8f0 !important;
+    box-shadow: none !important;
+}
+.stApp [class*="st-key-delete_"] button:hover,
+.stApp [class*="st-key-delete_"] button:focus,
+.stApp [class*="st-key-delete_"] button:active {
+    background: transparent !important;
     color: #fca5a5 !important;
+    box-shadow: none !important;
 }
 .stApp [class*="st-key-rename_"] button p,
 .stApp [class*="st-key-delete_"] button p {
@@ -1038,11 +1161,33 @@ def _invoke_for_pending(session_id: str, text: str) -> None:
 # Sidebar — session list
 # =============================================================================
 
-with st.sidebar:
-    if INTRO_IMAGE_PATH.exists():
-        st.image(str(INTRO_IMAGE_PATH), width=220)
+# Resolve the active session BEFORE rendering the sidebar so the sidebar can
+# highlight it on the very first render. Without this hoist, the sidebar
+# reads `current_session_id` from session_state while it is still None on a
+# fresh page load; only the main area below would compute it, leaving the
+# auto-selected chat unhighlighted until the user clicks something.
+if not st.session_state.get("_checkpoint_error"):
+    try:
+        _ensure_current_session()
+    except Exception as exc:
+        logger.exception("Failed to resolve Code Charlie session for sidebar")
+        st.session_state["_checkpoint_error"] = _checkpoint_error_message(exc)
 
-    st.html('<div class="sidebar-brand-title">Code Charlie</div>')
+with st.sidebar:
+    # Render the brand image as a raw <img> with a base64 data URI instead
+    # of `st.image()`. Streamlit's media server re-encodes uploaded images
+    # which can soften details — inlining the original PNG bytes preserves
+    # source quality. Crisp rendering hints help on hi-DPI displays.
+    intro_data_uri = _file_data_uri(INTRO_IMAGE_PATH, "image/png")
+    if intro_data_uri:
+        st.html(
+            f'<img class="sidebar-brand-image" src="{intro_data_uri}" alt="Code Charlie" />'
+        )
+
+    st.html(
+        '<div class="sidebar-brand-title">Code Charlie</div>'
+        '<div class="sidebar-brand-subtitle">Powered by Medha 1.0 — KARR AI</div>'
+    )
 
     if st.button("＋ New chat", use_container_width=True, type="primary"):
         try:
@@ -1196,7 +1341,7 @@ except Exception as exc:
 
 messages = _normalize_messages(state.get("messages", []))
 
-st.html('<h1 class="main-chat-title">Code Charlie: Powered by Medha 1.0 - KARR AI</h1>')
+st.html('<h1 class="main-chat-title">Code Charlie</h1>')
 #st.caption("Ask compliance questions across DBC, CIBSE, EN 81, BCO, ASME/ADA/IBC, HTM, ISO, DoH, BMU, CSI, Machinery Directive.")
 
 # Render existing history
