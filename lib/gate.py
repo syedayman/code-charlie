@@ -66,9 +66,28 @@ def require_password() -> bool:
     visibility: hidden;
     height: 0;
 }
+html, body, .stApp, .stApp [data-testid="stAppViewContainer"] {
+    height: 100vh;
+    overflow: hidden;
+}
+.stApp [data-testid="stAppViewContainer"] > .main,
+.stApp section.main {
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
 .block-container {
-    max-width: 34rem !important;
-    padding-top: 4.5rem !important;
+    max-width: 48rem !important;
+    height: 100vh !important;
+    max-height: 100vh !important;
+    padding-top: 0.75rem !important;
+    padding-bottom: 0.75rem !important;
+    display: flex !important;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.4rem;
+    overflow: hidden;
 }
 .stApp h1 {
     color: #f8fafc !important;
@@ -90,35 +109,55 @@ def require_password() -> bool:
 .stApp [data-testid="stImage"] img {
     filter: drop-shadow(0 0 42px rgba(56, 189, 248, 0.22));
 }
+.stApp [data-testid="stElementContainer"]:has(.gate-logo-wrap) {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+}
 .gate-logo-wrap {
     display: flex;
     justify-content: center;
+    align-items: center;
     width: 100%;
-    margin-bottom: 1.2rem;
+    height: 100%;
+    margin: 0;
 }
 .gate-logo-wrap img {
     display: block;
-    width: 260px;
-    max-width: min(72vw, 260px);
-    height: auto;
-    filter: drop-shadow(0 0 42px rgba(56, 189, 248, 0.22));
+    width: auto;
+    height: 100%;
+    max-height: min(calc(100vh - 24rem), 90vw);
+    max-width: 90vw;
+    object-fit: contain;
+    filter: drop-shadow(0 0 60px rgba(56, 189, 248, 0.28));
 }
 .gate-title-wrap {
     display: flex;
     justify-content: center;
     width: 100%;
     text-align: center;
-    margin: 0 0 1.25rem;
+    margin: 0;
 }
 .gate-title-wrap .gate-title {
     color: #f8fafc !important;
     text-align: center !important;
     font-family: 'Clash Grotesk', Inter, system-ui, sans-serif !important;
-    font-size: 3rem;
+    font-size: 2.25rem;
     line-height: 1.05;
     font-weight: 700;
     letter-spacing: 0;
     margin: 0 !important;
+}
+.gate-subtitle {
+    margin: 0 !important;
+    font-size: 0.9rem;
+}
+.gate-description {
+    margin: 0 0 0.25rem !important;
+    font-size: 0.85rem;
 }
 .gate-subtitle,
 .gate-description {
@@ -129,7 +168,7 @@ def require_password() -> bool:
     border: 1px solid rgba(255, 255, 255, 0.1) !important;
     border-radius: 1rem !important;
     backdrop-filter: blur(14px);
-    padding: 1.15rem !important;
+    padding: 0.9rem !important;
 }
 .stApp [data-testid="stTextInput"] input {
     background: rgba(2, 6, 23, 0.62) !important;
