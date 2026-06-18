@@ -81,6 +81,7 @@ CODE_ALIASES: List[Tuple[str, str]] = [
     ("cibse", "CIBSE"),
     ("en 81-20", "EN81"),
     ("en 81-70", "EN81"),
+    ("en 81-71", "EN81"),
     ("en 81-72", "EN81"),
     ("en 81-41", "EN81"),
     ("en 81-73", "EN81"),
@@ -131,6 +132,16 @@ CODE_ALIASES: List[Tuple[str, str]] = [
 DOC_ALIASES: List[Tuple[str, Tuple[str, str]]] = [
     ("dbc part d", ("DBC", "DBC Part D")),
     ("dbc part c", ("DBC", "DBC Part C VT only")),
+    # EN 81 docs that have hand-curated markdown. document_name must match
+    # compliance_embeddings exactly. (PDF-only EN parts 41/58/70/73/76 omitted
+    # on purpose — no markdown; they still retrieve + get EN81 code scoping.)
+    ("en 81-20", ("EN81", "EN 81-20-2014")),
+    ("en 81-71", ("EN81", "EN-81-71-2018")),
+    ("en 81-72", ("EN81", "EN 81-72-2015")),
+    # EN 115: markdown exists on disk but is NOT yet ingested (DB still v2);
+    # alias points at the current rows so scoping works today.
+    ("en 115", ("EN81", "EN115 -2017")),
+    ("en115", ("EN81", "EN115 -2017")),
     ("cibse guide d 2025", ("CIBSE", "CIBSE Guide D 2025")),
     ("nfpa 5000", ("ASME, ADA ,IBC", "NFPA 5000-2009 Building Construction and Safety Code")),
     ("nfpa 101", ("ASME, ADA ,IBC", "NFPA 101-2024")),
